@@ -1,0 +1,188 @@
+/* RiskMatrix.css — Clean white accordion */
+
+.matrix-layout {
+  min-height: 100vh;
+  background: #f1f5f9;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.matrix-container {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ── Back button ── */
+.back-header-btn {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  color: #4f46e5;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.25rem;
+}
+.back-header-btn:hover {
+  background: #eef2ff;
+  border-color: #4f46e5;
+}
+
+/* ── Header ── */
+.matrix-header {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 2rem 2rem 1.75rem;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.matrix-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+}
+.matrix-header p {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ── Tier chips ── */
+.tiers-strip {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin: 0.25rem 0;
+}
+.tier-chip {
+  padding: 0.35rem 1rem;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tier-low  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.tier-med  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.tier-high { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* ── Accordion ── */
+.accordion {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.accordion-open { border-color: #c7d2fe; }
+
+.accordion-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: none;
+  border: none;
+  color: #0f172a;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.accordion-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.accordion-icon { font-size: 1.1rem; }
+.accordion-title { font-weight: 600; color: #0f172a; }
+
+.accordion-right {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.accordion-max {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.accordion-chevron { font-size: 0.65rem; color: #94a3b8; }
+
+.accordion-body {
+  padding: 0 1.25rem 1.25rem;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Matrix table ── */
+.matrix-table {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mt-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4f46e5;
+  font-weight: 700;
+  margin-bottom: 3px;
+  padding-left: 4px;
+}
+.mt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.875rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #475569;
+}
+.mt-spacer { margin-top: 0.5rem; }
+
+.pts-red {
+  color: #dc2626;
+  font-weight: 700;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.15rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+}
+.pts-green {
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .matrix-layout { padding: 1rem 0.75rem; }
+  .matrix-header { padding: 1.5rem 1.25rem; }
+  .matrix-header h1 { font-size: 1.3rem; }
+  .tiers-strip { flex-wrap: wrap; }
+  .mt-row { font-size: 0.8rem; }
+  .accordion-header { font-size: 0.85rem; }
+}
