@@ -24,6 +24,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,6 +33,7 @@ function LoginForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
 
     if (view === 'register') {
@@ -68,7 +70,7 @@ function LoginForm() {
       } else {
         setView('login');
         setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-        window.alert('Registration successful! Please login.');
+        setRegisterSuccess('Registration successful! Please login.');
       }
     } catch (err) {
       setError(err.message);
@@ -79,6 +81,7 @@ function LoginForm() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
     setForgotSuccess('');
     setIsLoading(true);
@@ -167,6 +170,7 @@ function LoginForm() {
           </p>
         </div>
 
+        {registerSuccess && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', marginBottom: '12px' }}>{registerSuccess}</div>}
         {error && <div className="error-message">{error}</div>}
 
         {view === 'forgot' ? (

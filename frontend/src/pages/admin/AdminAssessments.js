@@ -20,8 +20,12 @@ function AdminAssessments() {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/assessment/admin/all`, {
@@ -32,17 +36,33 @@ function AdminAssessments() {
       .catch(() => setLoading(false));
   }, [token]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this assessment? This cannot be undone.')) return;
-    setDeletingId(id);
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelectAll = () => {
+    const allSelected = paginated.length > 0 && paginated.every(a => selectedIds.has(a.id));
+    setSelectedIds(allSelected ? new Set() : new Set(paginated.map(a => a.id)));
+  };
+  const handleBulkDelete = async () => {
+    setBulkDeleteConfirm(false);
+    setBulkDeleting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/assessment/admin/${id}`, {
+      await Promise.all([...selectedIds].map(id => fetch(`${API_BASE}/api/assessment/admin/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })));
+      setAssessments(prev => prev.filter(a => !selectedIds.has(a.id)));
+      setSelectedIds(new Set());
+    } catch {}
+    setBulkDeleting(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeletingId(deleteConfirm.id);
+    setDeleteConfirm(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/assessment/admin/${deleteConfirm.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) setAssessments(prev => prev.filter(a => a.id !== id));
-      else alert('Failed to delete assessment.');
-    } catch { alert('Network error.'); }
+      if (res.ok) setAssessments(prev => prev.filter(a => a.id !== deleteConfirm.id));
+    } catch {}
     finally { setDeletingId(null); }
   };
 
@@ -82,6 +102,23 @@ function AdminAssessments() {
 
       {loading ? <LoadingSpinner message="Loading assessments..." /> : (
         <>
+          {selectedIds.size > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px' }}>
+              <span style={{ color: '#4f46e5', fontSize: '13px', fontWeight: '600' }}>{selectedIds.size} selected</span>
+              <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkDeleting}
+                style={{ padding: '7px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())}
+                style={{ padding: '7px 14px', background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Clear
+              </button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', color: '#475569', fontSize: '13px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={paginated.every(a => selectedIds.has(a.id))} onChange={toggleSelectAll} />
+                Select all on page
+              </label>
+            </div>
+          )}
           {paginated.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', color: '#94a3b8' }}>No assessments found.</div>
           ) : (
@@ -92,10 +129,13 @@ function AdminAssessments() {
                 return (
                   <div key={a.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '15px', color: '#0f172a' }}>{a.user_name}</div>
-                        <div style={{ color: '#64748b', fontSize: '13px' }}>{a.user_email}</div>
-                        <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{new Date(a.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <input type="checkbox" checked={selectedIds.has(a.id)} onChange={() => toggleSelect(a.id)} onClick={e => e.stopPropagation()} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#4f46e5' }} />
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '15px', color: '#0f172a' }}>{a.user_name}</div>
+                          <div style={{ color: '#64748b', fontSize: '13px' }}>{a.user_email}</div>
+                          <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{new Date(a.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                         <span style={{ padding: '4px 14px', borderRadius: '20px', fontWeight: '700', fontSize: '12px', background: rc.bg, border: `1px solid ${rc.border}`, color: rc.text }}>{a.risk_level} RISK</span>
@@ -107,7 +147,7 @@ function AdminAssessments() {
                           style={{ background: isExpanded ? '#eef2ff' : '#f8fafc', border: '1px solid #e2e8f0', color: '#4f46e5', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit' }}>
                           {isExpanded ? 'Hide ▲' : 'Details ▼'}
                         </button>
-                        <button onClick={() => handleDelete(a.id)} disabled={deletingId === a.id}
+                        <button onClick={() => setDeleteConfirm({ id: a.id, name: a.user_name })} disabled={deletingId === a.id}
                           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', fontFamily: 'inherit' }}>
                           {deletingId === a.id ? '...' : 'Delete'}
                         </button>
@@ -162,6 +202,48 @@ function AdminAssessments() {
             </div>
           )}
         </>
+      )}
+      {bulkDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Delete {selectedIds.size} Assessments?</h3>
+            <p style={{ margin: '0 0 24px', color: '#dc2626', fontSize: '13px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px' }}>
+              ⚠ This will also delete all feedback linked to these assessments. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setBulkDeleteConfirm(false)} style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleBulkDelete} style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Yes, Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Delete Assessment?</h3>
+            <p style={{ margin: '0 0 6px 0', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+              You are about to delete the assessment for <strong style={{ color: '#0f172a' }}>{deleteConfirm.name}</strong>.
+            </p>
+            <p style={{ margin: '0 0 24px 0', color: '#dc2626', fontSize: '13px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px' }}>
+              ⚠ This will also delete any feedback tied to this assessment. Applications and claims are not affected.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setDeleteConfirm(null)}
+                style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete}
+                style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );

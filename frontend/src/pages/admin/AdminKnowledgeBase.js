@@ -19,8 +19,10 @@ function AdminKnowledgeBase() {
   const [file, setFile]             = useState(null);
   const [processing, setProcessing] = useState(false);
 
-  // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -135,6 +137,23 @@ function AdminKnowledgeBase() {
     }
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelectAll = () => {
+    const allSelected = documents.length > 0 && documents.every(d => selectedIds.has(d.id));
+    setSelectedIds(allSelected ? new Set() : new Set(documents.map(d => d.id)));
+  };
+  const handleBulkDelete = async () => {
+    setBulkDeleteConfirm(false);
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map(id => fetch(`${API}/${id}`, { method: 'DELETE' })));
+      setDocuments(prev => prev.filter(d => !selectedIds.has(d.id)));
+      setSelectedIds(new Set());
+      setToast({ type: 'success', msg: 'Selected documents deleted from AI memory.' });
+    } catch { setToast({ type: 'error', msg: 'Some deletions failed.' }); }
+    setBulkDeleting(false);
+  };
+
   // ── Delete ──
   const handleDelete = async (docId) => {
     try {
@@ -206,9 +225,24 @@ function AdminKnowledgeBase() {
             <p>Click "Add New Knowledge" to train your AI chatbot with data.</p>
           </div>
         ) : (
+          <>
+          {selectedIds.size > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px' }}>
+              <span style={{ color: '#4f46e5', fontSize: '13px', fontWeight: '600' }}>{selectedIds.size} selected</span>
+              <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkDeleting}
+                style={{ padding: '7px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
+              </button>
+              <button onClick={() => setSelectedIds(new Set())}
+                style={{ padding: '7px 14px', background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Clear
+              </button>
+            </div>
+          )}
           <table className="kb-table">
             <thead>
               <tr>
+                <th style={{ width: '40px' }}><input type="checkbox" checked={documents.length > 0 && documents.every(d => selectedIds.has(d.id))} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: '#4f46e5' }} /></th>
                 <th>Document Title</th>
                 <th>Chunks</th>
                 <th>Date Added</th>
@@ -217,7 +251,8 @@ function AdminKnowledgeBase() {
             </thead>
             <tbody>
               {documents.map((doc) => (
-                <tr key={doc.id}>
+                <tr key={doc.id} style={{ background: selectedIds.has(doc.id) ? '#f5f3ff' : undefined }}>
+                  <td><input type="checkbox" checked={selectedIds.has(doc.id)} onChange={() => toggleSelect(doc.id)} style={{ cursor: 'pointer', accentColor: '#4f46e5' }} /></td>
                   <td><span className="kb-doc-title">{doc.title}</span></td>
                   <td><span className="kb-chunk-badge">{doc.chunk_count} chunks</span></td>
                   <td><span className="kb-date">{new Date(doc.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}</span></td>
@@ -231,6 +266,7 @@ function AdminKnowledgeBase() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
 
@@ -330,6 +366,19 @@ function AdminKnowledgeBase() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteConfirm && (
+        <div className="kb-confirm-overlay" onClick={() => setBulkDeleteConfirm(false)}>
+          <div className="kb-confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3>🗑️ Delete {selectedIds.size} Documents?</h3>
+            <p>This will permanently remove <strong>{selectedIds.size} documents</strong> and all their AI chunks from memory. This cannot be undone.</p>
+            <div className="kb-confirm-actions">
+              <button className="kb-btn-cancel" onClick={() => setBulkDeleteConfirm(false)}>Cancel</button>
+              <button className="kb-btn-danger" onClick={handleBulkDelete}>Yes, Delete All</button>
             </div>
           </div>
         </div>

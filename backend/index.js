@@ -17,17 +17,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
-  message: { message: 'Too many attempts. Please try again after 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-app.use('/api/login', authLimiter);
-app.use('/api/register', authLimiter);
-app.use('/api/google-login', authLimiter);
-app.use('/api/forgot-password', authLimiter);
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,

@@ -316,7 +316,10 @@ module.exports = (pool) => {
         const { id } = req.params;
         const [rows] = await pool.execute('SELECT id FROM assessments WHERE id = ?', [id]);
         if (rows.length === 0) return res.status(404).json({ message: 'Assessment not found' });
+
+        await pool.execute('DELETE FROM feedback WHERE assessment_id = ?', [id]);
         await pool.execute('DELETE FROM assessments WHERE id = ?', [id]);
+
         res.json({ message: 'Assessment deleted successfully.' });
       } catch (err) {
         console.error('Error deleting assessment:', err);

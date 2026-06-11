@@ -44,6 +44,11 @@ function BrowsePlans() {
   const [maxPremium, setMaxPremium] = useState('');
   const [minCoverage, setMinCoverage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [compareWarning, setCompareWarning] = useState(false);
+  const [noAssessmentModal, setNoAssessmentModal] = useState(false);
+  const [allPage, setAllPage] = useState(1);
+  const [recPage, setRecPage] = useState(1);
+  const plansPerPage = 6;
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -108,25 +113,10 @@ function BrowsePlans() {
     }
   }, [location.search]);
 
-  const handleAutoFill = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/assessment/latest`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.risk_level === 'HIGH') { setMinCoverage('200000'); setMaxPremium(''); }
-        else if (data.risk_level === 'MEDIUM') { setMinCoverage('100000'); setMaxPremium(''); }
-        else { setMinCoverage('50000'); setMaxPremium(''); }
-        setFilterType('all');
-        alert(`Filters updated based on your risk level: ${data.risk_level} (Score: ${data.total_score})`);
-      } else {
-        alert('No risk assessment found. Please complete your assessment first.');
-      }
-    } catch {
-      alert('Could not fetch your risk assessment.');
-    }
-  };
+  useEffect(() => {
+    setAllPage(1);
+    setRecPage(1);
+  }, [filterType, maxPremium, minCoverage, searchQuery]);
 
   const applyFilters = (p) => {
     if (filterType !== 'all' && p.insurance_type !== filterType) return false;
@@ -146,7 +136,11 @@ function BrowsePlans() {
     setCompareList(prev => {
       const exists = prev.find(p => p.id === plan.id);
       if (exists) return prev.filter(p => p.id !== plan.id);
-      if (prev.length >= 3) { alert('You can compare up to 3 plans at a time.'); return prev; }
+      if (prev.length >= 3) {
+        setCompareWarning(true);
+        setTimeout(() => setCompareWarning(false), 3000);
+        return prev;
+      }
       return [...prev, plan];
     });
   };
@@ -159,8 +153,7 @@ function BrowsePlans() {
 
   const handleApplyClick = (plan) => {
     if (!assessmentId) {
-      alert("You must complete a Risk Assessment before applying for a plan. The provider needs your risk score!");
-      navigate('/assessment');
+      setNoAssessmentModal(true);
       return;
     }
     setApplyingPlan(plan);
@@ -261,8 +254,9 @@ function BrowsePlans() {
             {isExpanded ? 'Hide details ▲' : 'Show details ▼'}
           </button>
           <button onClick={() => handleApplyClick(plan)}
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', cursor: 'pointer', padding: '9px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
-            Apply Now
+            title={!assessmentId ? 'Complete your Risk Assessment first' : ''}
+            style={{ background: assessmentId ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0', border: 'none', color: assessmentId ? '#fff' : '#94a3b8', cursor: 'pointer', padding: '9px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', fontFamily: 'inherit', boxShadow: assessmentId ? '0 2px 8px rgba(16,185,129,0.3)' : 'none' }}>
+            {assessmentId ? 'Apply Now' : '🔒 Assessment Required'}
           </button>
         </div>
 
@@ -322,10 +316,6 @@ function BrowsePlans() {
           <input type="number" value={maxPremium} onChange={e => setMaxPremium(e.target.value)} placeholder="e.g. 300" min="0"
             style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#0f172a', fontSize: '13px', background: '#f8fafc', fontFamily: 'inherit', width: '130px' }} />
         </div>
-        <button onClick={handleAutoFill}
-          style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', fontFamily: 'inherit' }}>
-          🎯 Auto-Fill from Risk Score
-        </button>
         <div style={{ flex: 1, minWidth: '180px' }}>
           <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Search</div>
           <input
@@ -375,7 +365,28 @@ function BrowsePlans() {
               <p style={{ color: '#94a3b8' }}>No matched plans fit your current filters.</p>
             </div>
           )}
-          {!matchLoading && filteredMatched.map(plan => renderPlanCard(plan, true))}
+          {!matchLoading && (() => {
+            const totalRecPages = Math.ceil(filteredMatched.length / plansPerPage) || 1;
+            const paginatedRec = filteredMatched.slice((recPage - 1) * plansPerPage, recPage * plansPerPage);
+            return (
+              <>
+                {paginatedRec.map(plan => renderPlanCard(plan, true))}
+                {totalRecPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+                    <button onClick={() => setRecPage(p => Math.max(1, p - 1))} disabled={recPage === 1}
+                      style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: recPage === 1 ? 'not-allowed' : 'pointer', color: recPage === 1 ? '#94a3b8' : '#475569', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600' }}>
+                      ← Prev
+                    </button>
+                    <span style={{ color: '#475569', fontSize: '13px' }}>Page {recPage} of {totalRecPages}</span>
+                    <button onClick={() => setRecPage(p => Math.min(totalRecPages, p + 1))} disabled={recPage === totalRecPages}
+                      style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: recPage === totalRecPages ? 'not-allowed' : 'pointer', color: recPage === totalRecPages ? '#94a3b8' : '#475569', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600' }}>
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
 
@@ -388,7 +399,28 @@ function BrowsePlans() {
               <p style={{ color: '#94a3b8' }}>No plans match your current filters.</p>
             </div>
           )}
-          {filtered.map(plan => renderPlanCard(plan, false))}
+          {(() => {
+            const totalAllPages = Math.ceil(filtered.length / plansPerPage) || 1;
+            const paginatedAll = filtered.slice((allPage - 1) * plansPerPage, allPage * plansPerPage);
+            return (
+              <>
+                {paginatedAll.map(plan => renderPlanCard(plan, false))}
+                {totalAllPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+                    <button onClick={() => setAllPage(p => Math.max(1, p - 1))} disabled={allPage === 1}
+                      style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: allPage === 1 ? 'not-allowed' : 'pointer', color: allPage === 1 ? '#94a3b8' : '#475569', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600' }}>
+                      ← Prev
+                    </button>
+                    <span style={{ color: '#475569', fontSize: '13px' }}>Page {allPage} of {totalAllPages}</span>
+                    <button onClick={() => setAllPage(p => Math.min(totalAllPages, p + 1))} disabled={allPage === totalAllPages}
+                      style={{ padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: allPage === totalAllPages ? 'not-allowed' : 'pointer', color: allPage === totalAllPages ? '#94a3b8' : '#475569', fontFamily: 'inherit', fontSize: '13px', fontWeight: '600' }}>
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
 
@@ -404,6 +436,11 @@ function BrowsePlans() {
               </button>
             </div>
           ))}
+          {compareWarning && (
+            <div style={{ fontSize: '12px', color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 10px', marginBottom: '8px', textAlign: 'center' }}>
+              Max 3 plans at a time
+            </div>
+          )}
           <button onClick={() => setShowCompareModal(true)}
             style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', marginTop: '4px', fontFamily: 'inherit' }}>
             Compare ({compareList.length}/3)
@@ -527,6 +564,29 @@ function BrowsePlans() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {noAssessmentModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fffbeb', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '22px' }}>
+              📋
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Assessment Required</h3>
+            <p style={{ margin: '0 0 24px', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+              You need to complete your <strong style={{ color: '#0f172a' }}>Risk Assessment</strong> before applying for a plan. The provider needs your risk score to process your application.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setNoAssessmentModal(false)}
+                style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={() => { setNoAssessmentModal(false); navigate('/assessment'); }}
+                style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Take Assessment
+              </button>
+            </div>
           </div>
         </div>
       )}

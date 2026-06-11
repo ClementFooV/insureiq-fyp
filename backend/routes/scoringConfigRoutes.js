@@ -19,6 +19,9 @@ module.exports = (pool) => {
   // Max score summary — admin only
   router.get('/max-score', authMiddleware, requireRole('admin'), c.getMaxScore);
 
+  // Thresholds — any authenticated user (used by RiskMatrix page)
+  router.get('/thresholds', authMiddleware, c.getThresholds);
+
   // Weights — admin only
   router.get('/weights', authMiddleware, requireRole('admin'), c.getWeights);
   router.put('/weights/:key', authMiddleware, requireRole('admin'), c.updateWeight);

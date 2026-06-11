@@ -160,6 +160,22 @@ function AdminScoringConfig() {
     } catch { showMsg('Delete failed.', 'error'); }
   };
 
+  const reactivateQuestion = async (q) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/scoring/questions/${q.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          title: q.title, description: q.description || '', category: q.category,
+          is_active: true,
+          options: q.options.map(o => ({ option_value: o.option_value, option_label: o.option_label, score_points: o.score_points }))
+        })
+      });
+      if (res.ok) { showMsg('Question reactivated.'); fetchQuestions(); fetchMaxScore(); }
+      else showMsg('Reactivate failed.', 'error');
+    } catch { showMsg('Network error.', 'error'); }
+  };
+
   const moveQuestion = async (id, direction) => {
     const idx = questions.findIndex(q => q.id === id);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -308,7 +324,9 @@ function AdminScoringConfig() {
 
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button onClick={() => openEdit(q)} style={{ padding: '7px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '7px', color: '#475569', cursor: 'pointer', fontWeight: '600', fontFamily: 'inherit', fontSize: '12px' }}>Edit</button>
-                          <button onClick={() => setDeleteConfirm(q.id)} style={{ padding: '7px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px', color: '#dc2626', cursor: 'pointer', fontWeight: '600', fontFamily: 'inherit', fontSize: '12px' }}>
+                          <button
+                            onClick={() => q.is_active ? setDeleteConfirm(q.id) : reactivateQuestion(q)}
+                            style={{ padding: '7px 14px', background: q.is_active ? '#fef2f2' : '#f0fdf4', border: `1px solid ${q.is_active ? '#fecaca' : '#bbf7d0'}`, borderRadius: '7px', color: q.is_active ? '#dc2626' : '#16a34a', cursor: 'pointer', fontWeight: '600', fontFamily: 'inherit', fontSize: '12px' }}>
                             {q.is_active ? 'Deactivate' : 'Reactivate'}
                           </button>
                         </div>

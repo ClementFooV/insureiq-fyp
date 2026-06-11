@@ -31,6 +31,11 @@ function AdminUserManagement() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [userConfirm, setUserConfirm] = useState(null);
+  const [userActionError, setUserActionError] = useState('');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [createError, setCreateError] = useState('');
@@ -147,8 +152,6 @@ function AdminUserManagement() {
   };
 
   const handleToggleStatus = async (u) => {
-    const action = u.status === 'suspended' ? 'activate' : 'suspend';
-    if (!window.confirm(`Are you sure you want to ${action} the account for "${u.name || u.email}"?`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/users/${u.id}/toggle-status`, {
         method: 'PUT',
@@ -158,12 +161,11 @@ function AdminUserManagement() {
       if (!res.ok) throw new Error(data.message);
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      setUserActionError(err.message);
     }
   };
 
-  const handleDeleteUser = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${userName}"? This action cannot be undone.`)) return;
+  const handleDeleteUser = async (userId) => {
     try {
       const res = await fetch(`${API_BASE}/api/users/${userId}`, {
         method: 'DELETE',
@@ -173,8 +175,33 @@ function AdminUserManagement() {
       if (!res.ok) throw new Error(data.message);
       fetchUsers();
     } catch (err) {
-      alert(err.message);
+      setUserActionError(err.message);
     }
+  };
+
+  const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleSelectAll = () => {
+    const nonAdmins = currentData.filter(u => u.role !== 'admin');
+    const allSelected = nonAdmins.length > 0 && nonAdmins.every(u => selectedIds.has(u.id));
+    setSelectedIds(allSelected ? new Set() : new Set(nonAdmins.map(u => u.id)));
+  };
+  const handleBulkDelete = async () => {
+    setBulkDeleteConfirm(false);
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map(id => fetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })));
+      setUsers(prev => prev.filter(u => !selectedIds.has(u.id)));
+      setSelectedIds(new Set());
+    } catch (err) { setUserActionError(err.message); }
+    setBulkDeleting(false);
+  };
+
+  const handleUserConfirm = () => {
+    if (!userConfirm) return;
+    const { type, user } = userConfirm;
+    setUserConfirm(null);
+    if (type === 'toggle') handleToggleStatus(user);
+    if (type === 'delete') handleDeleteUser(user.id);
   };
 
   const openEdit = (u) => {
@@ -279,10 +306,26 @@ function AdminUserManagement() {
 
           {!loading && filtered.length > 0 && (
             <>
+              {selectedIds.size > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px' }}>
+                  <span style={{ color: '#4f46e5', fontSize: '13px', fontWeight: '600' }}>{selectedIds.size} selected</span>
+                  <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkDeleting}
+                    style={{ padding: '7px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
+                  </button>
+                  <button onClick={() => setSelectedIds(new Set())}
+                    style={{ padding: '7px 14px', background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Clear
+                  </button>
+                </div>
+              )}
               <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                      <th style={{ padding: '12px 16px', width: '40px' }}>
+                        <input type="checkbox" checked={currentData.filter(u => u.role !== 'admin').every(u => selectedIds.has(u.id)) && currentData.some(u => u.role !== 'admin')} onChange={toggleSelectAll} style={{ cursor: 'pointer', accentColor: '#4f46e5' }} />
+                      </th>
                       {['Name', 'Email', 'Role', 'Status', 'Joined', 'Actions'].map((h, i) => (
                         <th key={h} style={{ padding: '12px 16px', textAlign: i === 5 ? 'right' : 'left', color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: '700' }}>{h}</th>
                       ))}
@@ -293,7 +336,10 @@ function AdminUserManagement() {
                       const rc = roleBadgeColors[u.role] || roleBadgeColors.individual;
                       const sc = statusColors[u.status] || statusColors.active;
                       return (
-                        <tr key={u.id} style={{ borderBottom: i < currentData.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                        <tr key={u.id} style={{ borderBottom: i < currentData.length - 1 ? '1px solid #f1f5f9' : 'none', background: selectedIds.has(u.id) ? '#f5f3ff' : 'transparent' }}>
+                          <td style={{ padding: '14px 16px' }}>
+                            {u.role !== 'admin' && <input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} style={{ cursor: 'pointer', accentColor: '#4f46e5' }} />}
+                          </td>
                           <td style={{ padding: '14px 16px', color: '#0f172a', fontSize: '14px', fontWeight: '500' }}>
                             {u.name || '—'}
                             {u.google_id && <span style={{ marginLeft: '6px', fontSize: '11px', color: '#94a3b8' }}>(Google)</span>}
@@ -319,11 +365,11 @@ function AdminUserManagement() {
                             </button>
                             {u.role !== 'admin' && (
                               <>
-                                <button onClick={() => handleToggleStatus(u)}
+                                <button onClick={() => setUserConfirm({ type: 'toggle', user: u })}
                                   style={{ background: u.status === 'suspended' ? '#f0fdf4' : '#fffbeb', border: `1px solid ${u.status === 'suspended' ? '#bbf7d0' : '#fde68a'}`, color: u.status === 'suspended' ? '#16a34a' : '#d97706', cursor: 'pointer', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', marginRight: '5px', fontFamily: 'inherit' }}>
                                   {u.status === 'suspended' ? '✓ Activate' : '⏸ Suspend'}
                                 </button>
-                                <button onClick={() => handleDeleteUser(u.id, u.name || u.email)}
+                                <button onClick={() => setUserConfirm({ type: 'delete', user: u })}
                                   style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', cursor: 'pointer', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', fontFamily: 'inherit' }}>
                                   🗑️ Delete
                                 </button>
@@ -470,6 +516,55 @@ function AdminUserManagement() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {bulkDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Delete {selectedIds.size} Users?</h3>
+            <p style={{ margin: '0 0 24px', color: '#dc2626', fontSize: '13px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px' }}>
+              ⚠ This permanently deletes all selected user accounts. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setBulkDeleteConfirm(false)} style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleBulkDelete} style={{ flex: 1, padding: '11px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>Yes, Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {userActionError && (
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: '500', zIndex: 2000, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          {userActionError}
+          <button onClick={() => setUserActionError('')} style={{ marginLeft: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: '700' }}>✕</button>
+        </div>
+      )}
+      {userConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '22px' }}>
+              {userConfirm.type === 'delete' ? '🗑' : userConfirm.user.status === 'suspended' ? '✓' : '⚠'}
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+              {userConfirm.type === 'delete' ? 'Delete User?' : userConfirm.user.status === 'suspended' ? 'Activate Account?' : 'Suspend Account?'}
+            </h3>
+            <p style={{ margin: '0 0 24px', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+              {userConfirm.type === 'delete'
+                ? <>Permanently delete <strong style={{ color: '#0f172a' }}>{userConfirm.user.name || userConfirm.user.email}</strong>? This cannot be undone.</>
+                : userConfirm.user.status === 'suspended'
+                  ? <>Restore access for <strong style={{ color: '#0f172a' }}>{userConfirm.user.name || userConfirm.user.email}</strong>?</>
+                  : <>Suspend account for <strong style={{ color: '#0f172a' }}>{userConfirm.user.name || userConfirm.user.email}</strong>? They will no longer be able to log in.</>}
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setUserConfirm(null)}
+                style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={handleUserConfirm}
+                style={{ flex: 1, padding: '11px', background: userConfirm.type === 'delete' || userConfirm.user.status !== 'suspended' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #16a34a, #15803d)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {userConfirm.type === 'delete' ? 'Yes, Delete' : userConfirm.user.status === 'suspended' ? 'Yes, Activate' : 'Yes, Suspend'}
+              </button>
+            </div>
           </div>
         </div>
       )}

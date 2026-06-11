@@ -90,7 +90,7 @@ module.exports = (pool) => {
                  ass.total_score, ass.max_score, ass.risk_level, ass.recommendations, ass.explanations
           FROM applications a
           JOIN plans p ON a.plan_id = p.id
-          JOIN assessments ass ON a.assessment_id = ass.id
+          LEFT JOIN assessments ass ON a.assessment_id = ass.id
           WHERE a.provider_id = ?
           ORDER BY a.created_at DESC
         `;
@@ -131,7 +131,7 @@ module.exports = (pool) => {
            JOIN plans p ON a.plan_id = p.id
            JOIN users u ON a.user_id = u.id
            JOIN users pr ON a.provider_id = pr.id
-           JOIN assessments ass ON a.assessment_id = ass.id
+           LEFT JOIN assessments ass ON a.assessment_id = ass.id
            ORDER BY a.created_at DESC`
         );
         res.json(rows);

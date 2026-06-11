@@ -78,7 +78,6 @@ module.exports = (pool) => {
         const providerId = req.user.id;
         const { id } = req.params;
         const { plan_name, insurance_type, coverage_amount, premium_monthly, min_age, max_age, description, features, exclusions } = req.body;
-
         const [existing] = await pool.query(
           'SELECT * FROM plans WHERE id = ? AND provider_id = ?',
           [id, providerId]
@@ -111,6 +110,31 @@ module.exports = (pool) => {
       } catch (err) {
         console.error('Update plan error:', err);
         res.status(500).json({ message: 'Server error updating plan.' });
+      }
+    },
+
+    // Provider: Delete a plan and all related records
+    deletePlan: async (req, res) => {
+      try {
+        const providerId = req.user.id;
+        const { id } = req.params;
+
+        const [existing] = await pool.query(
+          'SELECT id FROM plans WHERE id = ? AND provider_id = ?',
+          [id, providerId]
+        );
+        if (existing.length === 0) {
+          return res.status(404).json({ message: 'Plan not found or access denied.' });
+        }
+
+        await pool.query('DELETE FROM claims WHERE plan_id = ?', [id]);
+        await pool.query('DELETE FROM applications WHERE plan_id = ?', [id]);
+        await pool.query('DELETE FROM plans WHERE id = ? AND provider_id = ?', [id, providerId]);
+
+        res.json({ message: 'Plan deleted successfully.' });
+      } catch (err) {
+        console.error('Delete plan error:', err);
+        res.status(500).json({ message: 'Server error deleting plan.' });
       }
     },
 
@@ -299,8 +323,8 @@ module.exports = (pool) => {
             // Parse features/exclusions JSON
             let features = [];
             let exclusions = [];
-            try { features = plan.features ? JSON.parse(plan.features) : []; } catch (e) {}
-            try { exclusions = plan.exclusions ? JSON.parse(plan.exclusions) : []; } catch (e) {}
+            try { features = plan.features ? (Array.isArray(plan.features) ? plan.features : JSON.parse(plan.features)) : []; } catch (e) {}
+            try { exclusions = plan.exclusions ? (Array.isArray(plan.exclusions) ? plan.exclusions : JSON.parse(plan.exclusions)) : []; } catch (e) {}
 
             matchedPlans.push({
               ...plan,

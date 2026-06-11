@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { getToken } from '../../utils/auth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const CLAIM_TYPES_BY_PLAN = {
   life:               [{ value: 'death',            label: 'Death' },
@@ -28,6 +29,7 @@ function MyApplications() {
   const [error, setError] = useState('');
   const [withdrawingId, setWithdrawingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, type: '', id: null });
   const [claimModal, setClaimModal] = useState(null); // holds the app object
   const [claimForm, setClaimForm] = useState({ claim_type: 'medical', incident_date: '', description: '', claimed_amount: '' });
   const [claimFiles, setClaimFiles] = useState([]);
@@ -92,7 +94,6 @@ function MyApplications() {
   };
 
   const handleCancelPolicy = async (id) => {
-    if (!window.confirm('Cancel this policy? This cannot be undone and will end your coverage.')) return;
     setCancellingId(id);
     try {
       const res = await fetch(`${API_BASE}/api/applications/${id}/cancel`, {
@@ -101,13 +102,12 @@ function MyApplications() {
       });
       const d = await res.json();
       if (res.ok) setApps(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled', end_date: new Date().toISOString() } : a));
-      else alert(d.message || 'Failed to cancel policy.');
-    } catch { alert('Network error.'); }
+      else setError(d.message || 'Failed to cancel policy.');
+    } catch { setError('Network error.'); }
     finally { setCancellingId(null); }
   };
 
   const handleWithdraw = async (id) => {
-    if (!window.confirm('Withdraw this application? This cannot be undone.')) return;
     setWithdrawingId(id);
     try {
       const res = await fetch(`${API_BASE}/api/applications/${id}/withdraw`, {
@@ -115,9 +115,16 @@ function MyApplications() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) setApps(prev => prev.filter(a => a.id !== id));
-      else { const d = await res.json(); alert(d.message || 'Failed to withdraw.'); }
-    } catch { alert('Network error.'); }
+      else { const d = await res.json(); setError(d.message || 'Failed to withdraw.'); }
+    } catch { setError('Network error.'); }
     finally { setWithdrawingId(null); }
+  };
+
+  const handleConfirm = () => {
+    const { type, id } = confirmDialog;
+    setConfirmDialog({ open: false, type: '', id: null });
+    if (type === 'cancel') handleCancelPolicy(id);
+    if (type === 'withdraw') handleWithdraw(id);
   };
 
   const getStatusStyle = (status) => {
@@ -265,14 +272,14 @@ function MyApplications() {
                           style={{ padding: '7px 16px', background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.25)', borderRadius: '8px', color: '#4f46e5', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                           🗂 File a Claim
                         </button>
-                        <button onClick={() => handleCancelPolicy(app.id)} disabled={cancellingId === app.id}
+                        <button onClick={() => setConfirmDialog({ open: true, type: 'cancel', id: app.id })} disabled={cancellingId === app.id}
                           style={{ padding: '7px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#dc2626', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                           {cancellingId === app.id ? 'Cancelling...' : 'Cancel Policy'}
                         </button>
                       </>
                     )}
                     {app.status === 'pending' && (
-                      <button onClick={() => handleWithdraw(app.id)} disabled={withdrawingId === app.id}
+                      <button onClick={() => setConfirmDialog({ open: true, type: 'withdraw', id: app.id })} disabled={withdrawingId === app.id}
                         style={{ padding: '7px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#dc2626', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
                         {withdrawingId === app.id ? 'Withdrawing...' : 'Withdraw Application'}
                       </button>
@@ -298,6 +305,18 @@ function MyApplications() {
         )}
       </>
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.type === 'cancel' ? 'Cancel Policy?' : 'Withdraw Application?'}
+        message={confirmDialog.type === 'cancel'
+          ? 'Are you sure you want to cancel this policy? This will end your coverage immediately and cannot be undone.'
+          : 'Are you sure you want to withdraw this application? This action cannot be undone.'}
+        confirmLabel={confirmDialog.type === 'cancel' ? 'Yes, Cancel Policy' : 'Yes, Withdraw'}
+        cancelLabel="Keep It"
+        variant="danger"
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmDialog({ open: false, type: '', id: null })}
+      />
       {/* Claim Modal */}
       {claimModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}>

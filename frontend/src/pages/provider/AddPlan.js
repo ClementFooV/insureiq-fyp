@@ -41,6 +41,7 @@ function AddPlan() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
     setSuccess('');
 
@@ -160,7 +161,7 @@ function AddPlan() {
               </div>
 
               <button type="submit" disabled={isLoading}
-                style={{ width: '100%', padding: '13px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', opacity: isLoading ? 0.6 : 1, boxShadow: '0 2px 8px rgba(79,70,229,0.3)' }}>
+                style={{ width: '100%', padding: '13px', background: isLoading ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: isLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: isLoading ? 'none' : '0 2px 8px rgba(79,70,229,0.3)', transition: 'background 0.2s' }}>
                 {isLoading ? 'Submitting...' : 'Submit Plan for Approval'}
               </button>
             </form>

@@ -48,9 +48,11 @@ module.exports = (pool) => {
       try {
         const [rows] = await pool.query(
           `SELECT f.id, f.rating, f.comment, f.created_at,
-                  u.name as user_name, u.email as user_email
+                  u.name as user_name, u.email as user_email,
+                  a.total_score, a.risk_level, a.created_at as assessment_date
            FROM feedback f
            JOIN users u ON f.user_id = u.id
+           LEFT JOIN assessments a ON f.assessment_id = a.id
            ORDER BY f.created_at DESC`
         );
         const [[stats]] = await pool.query(

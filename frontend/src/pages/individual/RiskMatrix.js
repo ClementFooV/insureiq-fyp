@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API_BASE from '../../config';
+import { getToken } from '../../utils/auth';
 import '../../styles/RiskMatrix.css';
 
 function AccordionSection({ icon, title, maxPts, children }) {
@@ -23,6 +25,17 @@ function AccordionSection({ icon, title, maxPts, children }) {
 
 function RiskMatrix() {
   const navigate = useNavigate();
+  const token = getToken();
+  const [thresholds, setThresholds] = useState({ medium: 91, high: 181 });
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/scoring/thresholds`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setThresholds({ medium: data.medium_threshold, high: data.high_threshold }); })
+      .catch(() => {});
+  }, [token]);
 
   return (
     <div className="matrix-layout">
@@ -39,9 +52,9 @@ function RiskMatrix() {
 
         {/* Risk Tiers Summary - always visible */}
         <div className="tiers-strip">
-          <div className="tier-chip tier-low">LOW  0 – 90</div>
-          <div className="tier-chip tier-med">MEDIUM  91 – 180</div>
-          <div className="tier-chip tier-high">HIGH  181+</div>
+          <div className="tier-chip tier-low">LOW  0 – {thresholds.medium - 1}</div>
+          <div className="tier-chip tier-med">MEDIUM  {thresholds.medium} – {thresholds.high - 1}</div>
+          <div className="tier-chip tier-high">HIGH  {thresholds.high}+</div>
         </div>
 
         {/* Accordion Sections */}

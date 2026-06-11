@@ -124,6 +124,20 @@ module.exports = (pool) => {
       }
     },
 
+    // GET /api/scoring/thresholds — public threshold values for RiskMatrix display
+    getThresholds: async (req, res) => {
+      try {
+        const [rows] = await pool.query(
+          "SELECT weight_key, points FROM scoring_weights WHERE weight_key IN ('risk_threshold_medium','risk_threshold_high')"
+        );
+        const medium = rows.find(r => r.weight_key === 'risk_threshold_medium')?.points ?? 91;
+        const high   = rows.find(r => r.weight_key === 'risk_threshold_high')?.points ?? 181;
+        res.json({ medium_threshold: medium, high_threshold: high });
+      } catch (err) {
+        res.status(500).json({ message: 'Server error fetching thresholds.' });
+      }
+    },
+
     // GET /api/scoring/weights — all weights grouped by category
     getWeights: async (req, res) => {
       try {

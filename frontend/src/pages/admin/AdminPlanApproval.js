@@ -118,9 +118,36 @@ function AdminPlanApproval() {
                         <span style={{ color: '#94a3b8' }}>Age: <strong style={{ color: '#0f172a' }}>{plan.min_age} – {plan.max_age}</strong></span>
                       </div>
 
-                      {plan.description && (
+                                      {plan.description && (
                         <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '10px', lineHeight: '1.5' }}>{plan.description}</p>
                       )}
+
+                      {(() => {
+                        const parseJson = (val) => { if (!val) return []; if (Array.isArray(val)) return val; try { return JSON.parse(val); } catch { return []; } };
+                        const features = parseJson(plan.features);
+                        const exclusions = parseJson(plan.exclusions);
+                        if (features.length === 0 && exclusions.length === 0) return null;
+                        return (
+                          <div style={{ display: 'flex', gap: '24px', marginBottom: '10px' }}>
+                            {features.length > 0 && (
+                              <div style={{ flex: 1 }}>
+                                <p style={{ color: '#16a34a', fontSize: '12px', fontWeight: '700', margin: '0 0 4px 0' }}>✓ Features</p>
+                                <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                                  {features.map((f, i) => <li key={i} style={{ color: '#475569', fontSize: '13px', marginBottom: '2px' }}>{f}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {exclusions.length > 0 && (
+                              <div style={{ flex: 1 }}>
+                                <p style={{ color: '#dc2626', fontSize: '12px', fontWeight: '700', margin: '0 0 4px 0' }}>✕ Exclusions</p>
+                                <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                                  {exclusions.map((e, i) => <li key={i} style={{ color: '#475569', fontSize: '13px', marginBottom: '2px' }}>{e}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {plan.status === 'rejected' && plan.rejection_reason && (
                         <div style={{ marginBottom: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '13px' }}>

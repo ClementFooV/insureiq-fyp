@@ -181,6 +181,46 @@ module.exports = (pool) => {
           return res.status(400).json({ message: 'Cannot delete another admin account.' });
         }
 
+        const role = target[0].role;
+
+        if (role === 'provider') {
+          // Get all plan IDs belonging to this provider
+          const [plans] = await pool.query('SELECT id FROM plans WHERE provider_id = ?', [id]);
+          const planIds = plans.map(p => p.id);
+
+          if (planIds.length > 0) {
+            // Get all application IDs under those plans
+            const [apps] = await pool.query(`SELECT id FROM applications WHERE plan_id IN (${planIds.map(() => '?').join(',')})`, planIds);
+            const appIds = apps.map(a => a.id);
+
+            if (appIds.length > 0) {
+              await pool.query(`DELETE FROM claims WHERE application_id IN (${appIds.map(() => '?').join(',')})`, appIds);
+            }
+            await pool.query(`DELETE FROM applications WHERE plan_id IN (${planIds.map(() => '?').join(',')})`, planIds);
+            await pool.query(`DELETE FROM plans WHERE provider_id = ?`, [id]);
+          }
+        } else if (role === 'individual') {
+          // Get all application IDs for this user
+          const [apps] = await pool.query('SELECT id FROM applications WHERE user_id = ?', [id]);
+          const appIds = apps.map(a => a.id);
+
+          if (appIds.length > 0) {
+            await pool.query(`DELETE FROM claims WHERE application_id IN (${appIds.map(() => '?').join(',')})`, appIds);
+          }
+          await pool.query('DELETE FROM applications WHERE user_id = ?', [id]);
+
+          // Clean up assessments and linked feedback
+          const [assessments] = await pool.query('SELECT id FROM assessments WHERE user_id = ?', [id]);
+          const assessmentIds = assessments.map(a => a.id);
+          if (assessmentIds.length > 0) {
+            await pool.query(`DELETE FROM feedback WHERE assessment_id IN (${assessmentIds.map(() => '?').join(',')})`, assessmentIds);
+          }
+          await pool.query('DELETE FROM assessments WHERE user_id = ?', [id]);
+        }
+
+        // Clean up notifications for any role
+        await pool.query('DELETE FROM notifications WHERE user_id = ?', [id]);
+
         await pool.query('DELETE FROM users WHERE id = ?', [id]);
         res.json({ message: 'User deleted successfully.' });
       } catch (err) {

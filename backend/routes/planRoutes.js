@@ -24,6 +24,7 @@ module.exports = (pool) => {
   // Provider: Get single plan (for editing) — must be after all literal routes
   router.get('/:id', authMiddleware, requireRole('provider'), planController.getPlanById);
   router.put('/:id', authMiddleware, requireRole('provider'), planValidationRules, validateRequest, planController.updatePlan);
+  router.delete('/:id', authMiddleware, requireRole('provider'), planController.deletePlan);
 
   return router;
 };

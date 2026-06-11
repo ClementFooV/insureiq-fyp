@@ -12,6 +12,12 @@ function ProviderApplications() {
   const [notes, setNotes] = useState({});
   const [updatingId, setUpdatingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [actionMsg, setActionMsg] = useState({ text: '', type: '' });
+
+  const showActionMsg = (text, type = 'success') => {
+    setActionMsg({ text, type });
+    setTimeout(() => setActionMsg({ text: '', type: '' }), 3500);
+  };
 
   // Filtering and Pagination state
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,11 +53,11 @@ function ProviderApplications() {
         body: JSON.stringify({ status, notes: notes[id] || '' })
       });
       if (!res.ok) throw new Error('Failed to update status');
-      alert(`Application ${status.toUpperCase()} successfully.`);
+      showActionMsg(`Application ${status === 'approved' ? 'approved' : 'rejected'} successfully.`, 'success');
       setNotes(prev => { const n = { ...prev }; delete n[id]; return n; });
       fetchApplications();
     } catch (err) {
-      alert(err.message);
+      showActionMsg(err.message, 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -93,6 +99,11 @@ function ProviderApplications() {
             <p>Review incoming prospect applications for your insurance products.</p>
           </div>
 
+          {actionMsg.text && (
+            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', background: actionMsg.type === 'error' ? '#fef2f2' : '#f0fdf4', border: `1px solid ${actionMsg.type === 'error' ? '#fecaca' : '#bbf7d0'}`, color: actionMsg.type === 'error' ? '#dc2626' : '#16a34a' }}>
+              {actionMsg.text}
+            </div>
+          )}
           {loading ? (
             <LoadingSpinner message="Loading queue..." />
           ) : error ? (

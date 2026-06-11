@@ -89,27 +89,42 @@ function AdminFeedback() {
             <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', color: '#94a3b8' }}>No feedback found.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {paginated.map(fb => (
-                <div key={fb.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div style={{ flexShrink: 0, display: 'flex', gap: '2px', marginTop: '2px' }}>
-                    {[1, 2, 3, 4, 5].map(s => (
-                      <span key={s} style={{ fontSize: '16px', color: s <= fb.rating ? '#4f46e5' : '#e2e8f0' }}>★</span>
-                    ))}
+              {paginated.map(fb => {
+                const riskColors = { LOW: { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' }, MEDIUM: { bg: '#fffbeb', border: '#fde68a', text: '#d97706' }, HIGH: { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' } };
+                const rc = riskColors[fb.risk_level] || null;
+                return (
+                <div key={fb.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                    <div style={{ flexShrink: 0, display: 'flex', gap: '2px', marginTop: '2px' }}>
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <span key={s} style={{ fontSize: '16px', color: s <= fb.rating ? '#4f46e5' : '#e2e8f0' }}>★</span>
+                      ))}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {fb.comment ? (
+                        <p style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '14px', lineHeight: '1.5' }}>"{fb.comment}"</p>
+                      ) : (
+                        <p style={{ margin: '0 0 6px 0', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>No comment left</p>
+                      )}
+                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                        {fb.user_name || fb.user_email}
+                        <span style={{ margin: '0 6px' }}>·</span>
+                        {new Date(fb.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {fb.comment ? (
-                      <p style={{ margin: '0 0 6px 0', color: '#0f172a', fontSize: '14px', lineHeight: '1.5' }}>"{fb.comment}"</p>
-                    ) : (
-                      <p style={{ margin: '0 0 6px 0', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>No comment left</p>
-                    )}
-                    <span style={{ color: '#94a3b8', fontSize: '12px' }}>
-                      {fb.user_name || fb.user_email}
-                      <span style={{ margin: '0 6px' }}>·</span>
-                      {new Date(fb.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
+                  {rc && (
+                    <div style={{ marginTop: '12px', padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Assessment taken on this report:</span>
+                      <span style={{ padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: rc.bg, border: `1px solid ${rc.border}`, color: rc.text }}>{fb.risk_level} RISK</span>
+                      <span style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>Score: <strong style={{ color: '#0f172a' }}>{fb.total_score}</strong></span>
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        {new Date(fb.assessment_date).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
 

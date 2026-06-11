@@ -17,6 +17,8 @@ function AdminClaims() {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetch(`${API_BASE}/api/claims/admin/all`, { headers: { Authorization: `Bearer ${token}` } })
@@ -26,6 +28,10 @@ function AdminClaims() {
   }, [token]);
 
   const filtered = filter === 'all' ? claims : claims.filter(c => c.status === filter);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const currentData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleFilterChange = (f) => { setFilter(f); setCurrentPage(1); };
 
   const stats = {
     total: claims.length,
@@ -61,7 +67,7 @@ function AdminClaims() {
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: '4px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
         {['all', 'pending', 'approved', 'rejected'].map(f => (
-          <button key={f} onClick={() => setFilter(f)}
+          <button key={f} onClick={() => handleFilterChange(f)}
             style={{ padding: '8px 18px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: '600', textTransform: 'capitalize',
               color: filter === f ? '#4f46e5' : '#64748b',
               borderBottom: filter === f ? '2px solid #4f46e5' : '2px solid transparent', marginBottom: '-2px' }}>
@@ -86,7 +92,7 @@ function AdminClaims() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((claim, i) => {
+              {currentData.map((claim, i) => {
                 const s = STATUS_STYLE[claim.status] || STATUS_STYLE.pending;
                 return (
                   <tr key={claim.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
@@ -119,6 +125,24 @@ function AdminClaims() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {!loading && totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+          <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+            Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length}
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+              style={{ padding: '7px 14px', background: '#f1f5f9', color: currentPage === 1 ? '#94a3b8' : '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+              Previous
+            </button>
+            <span style={{ color: '#475569', fontSize: '13px', padding: '7px 10px' }}>Page {currentPage} of {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+              style={{ padding: '7px 14px', background: '#f1f5f9', color: currentPage === totalPages ? '#94a3b8' : '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+              Next
+            </button>
+          </div>
         </div>
       )}
     </DashboardLayout>

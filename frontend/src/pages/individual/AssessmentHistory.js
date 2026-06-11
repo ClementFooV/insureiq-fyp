@@ -95,6 +95,9 @@ function AssessmentHistory() {
       });
   }, [token]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const toggleExpand = (id) => setExpanded(prev => (prev === id ? null : id));
 
   return (
@@ -123,15 +126,20 @@ function AssessmentHistory() {
                 </div>
               )}
 
+              {(() => {
+                const totalPages = Math.ceil(history.length / itemsPerPage) || 1;
+                const paginatedHistory = history.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+                return (<>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {history.map((item, index) => {
+                {paginatedHistory.map((item, index) => {
+                  const absIndex = (currentPage - 1) * itemsPerPage + index;
                   const rc = RISK_COLORS[item.risk_level] || RISK_COLORS.LOW;
                   return (
                     <div key={item.id} id={`history-card-${item.id}`} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                       {/* Card Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontWeight: '700', fontSize: '17px', color: '#0f172a' }}>Assessment #{history.length - index}</span>
+                          <span style={{ fontWeight: '700', fontSize: '17px', color: '#0f172a' }}>Assessment #{history.length - absIndex}</span>
                           <span style={{ color: '#94a3b8', fontSize: '13px' }}>{formatDate(item.created_at)}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -215,6 +223,26 @@ function AssessmentHistory() {
                   );
                 })}
               </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                    Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, history.length)} of {history.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                      style={{ padding: '7px 14px', background: '#f1f5f9', color: currentPage === 1 ? '#94a3b8' : '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+                      Previous
+                    </button>
+                    <span style={{ color: '#475569', fontSize: '13px', padding: '7px 10px' }}>Page {currentPage} of {totalPages}</span>
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                      style={{ padding: '7px 14px', background: '#f1f5f9', color: currentPage === totalPages ? '#94a3b8' : '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+              </>);
+              })()}
             </>
           )}
     </DashboardLayout>

@@ -21,6 +21,7 @@ function ProviderClaims() {
   const [actionForm, setActionForm] = useState({}); // { [claimId]: { settlement_amount, provider_notes } }
   const [processing, setProcessing] = useState(null);
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [pendingAction, setPendingAction] = useState(null); // { claim, status }
 
   // Filtering and Pagination state
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,8 +52,14 @@ function ProviderClaims() {
     if (status === 'approved' && Number(form.settlement_amount) > Number(claim.coverage_amount)) {
       return showMsg(`Settlement cannot exceed plan coverage of RM${Number(claim.coverage_amount).toLocaleString()}.`, 'error');
     }
-    if (!window.confirm(`${status === 'approved' ? 'Approve' : 'Reject'} this claim?`)) return;
+    setPendingAction({ claim, status });
+  };
 
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+    const { claim, status } = pendingAction;
+    setPendingAction(null);
+    const form = actionForm[claim.id] || {};
     setProcessing(claim.id);
     try {
       const res = await fetch(`${API_BASE}/api/claims/${claim.id}/status`, {
@@ -264,6 +271,33 @@ function ProviderClaims() {
           <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} style={{ padding: '8px 16px', border: '1px solid #e2e8f0', background: currentPage === totalPages ? '#f8fafc' : '#ffffff', color: currentPage === totalPages ? '#94a3b8' : '#0f172a', borderRadius: '8px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '600' }}>
             Next
           </button>
+        </div>
+      )}
+      {pendingAction && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: '0 16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: pendingAction.status === 'approved' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${pendingAction.status === 'approved' ? '#bbf7d0' : '#fecaca'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', fontSize: '22px' }}>
+              {pendingAction.status === 'approved' ? '✓' : '✕'}
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+              {pendingAction.status === 'approved' ? 'Approve Claim?' : 'Reject Claim?'}
+            </h3>
+            <p style={{ margin: '0 0 24px', color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
+              {pendingAction.status === 'approved'
+                ? `Approve claim from ${pendingAction.claim.applicant_name}? The settlement amount will be disbursed.`
+                : `Reject claim from ${pendingAction.claim.applicant_name}? This cannot be undone.`}
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setPendingAction(null)}
+                style={{ flex: 1, padding: '11px', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+              <button onClick={confirmAction}
+                style={{ flex: 1, padding: '11px', background: pendingAction.status === 'approved' ? 'linear-gradient(135deg, #16a34a, #15803d)' : 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {pendingAction.status === 'approved' ? 'Yes, Approve' : 'Yes, Reject'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </DashboardLayout>

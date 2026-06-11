@@ -48,8 +48,8 @@ function EditPlan() {
 
         let featuresStr = '';
         let exclusionsStr = '';
-        try { featuresStr = plan.features ? JSON.parse(plan.features).join(', ') : ''; } catch { featuresStr = plan.features || ''; }
-        try { exclusionsStr = plan.exclusions ? JSON.parse(plan.exclusions).join(', ') : ''; } catch { exclusionsStr = plan.exclusions || ''; }
+        try { featuresStr = plan.features ? JSON.parse(plan.features).join(', ') : ''; } catch { featuresStr = Array.isArray(plan.features) ? plan.features.join(', ') : (plan.features || ''); }
+        try { exclusionsStr = plan.exclusions ? JSON.parse(plan.exclusions).join(', ') : ''; } catch { exclusionsStr = Array.isArray(plan.exclusions) ? plan.exclusions.join(', ') : (plan.exclusions || ''); }
 
         setFormData({
           plan_name: plan.plan_name || '',
@@ -79,6 +79,7 @@ function EditPlan() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
     setSuccess('');
 
@@ -206,7 +207,7 @@ function EditPlan() {
                     Cancel
                   </button>
                   <button type="submit" disabled={isLoading}
-                    style={{ flex: 2, padding: '13px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', fontFamily: 'inherit', opacity: isLoading ? 0.6 : 1, boxShadow: '0 2px 8px rgba(79,70,229,0.3)' }}>
+                    style={{ flex: 2, padding: '13px', background: isLoading ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: isLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: isLoading ? 'none' : '0 2px 8px rgba(79,70,229,0.3)', transition: 'background 0.2s' }}>
                     {isLoading ? 'Updating...' : 'Update Plan'}
                   </button>
                 </div>

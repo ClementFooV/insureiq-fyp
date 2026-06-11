@@ -40,6 +40,7 @@ function ResetPassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
 
     const failedRules = passwordRules.filter(r => !r.test(password));
