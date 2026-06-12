@@ -49,6 +49,7 @@ function BrowsePlans() {
   const [allPage, setAllPage] = useState(1);
   const [recPage, setRecPage] = useState(1);
   const plansPerPage = 6;
+  const [myApplications, setMyApplications] = useState([]);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -102,6 +103,13 @@ function BrowsePlans() {
         setMatchError('Could not load matched plans.');
         setMatchLoading(false);
       });
+
+    fetch(`${API_BASE}/api/applications/my`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.applications) setMyApplications(data.applications); })
+      .catch(() => {});
   }, [fetchPlans, token]);
 
   useEffect(() => {
@@ -208,6 +216,8 @@ function BrowsePlans() {
     const isCompared = compareList.some(p => p.id === plan.id);
     const features = parseJson(plan.features);
     const exclusions = parseJson(plan.exclusions);
+    const existingApp = myApplications.find(a => a.plan_id === plan.id);
+    const appStatus = existingApp?.status;
     return (
       <div key={plan.id} style={{ ...card, borderColor: isMatched ? '#c7d2fe' : '#e2e8f0' }}>
         {isMatched && (
@@ -253,10 +263,18 @@ function BrowsePlans() {
             style={{ background: 'none', border: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontSize: '13px', fontWeight: '600', fontFamily: 'inherit' }}>
             {isExpanded ? 'Hide details ▲' : 'Show details ▼'}
           </button>
-          <button onClick={() => handleApplyClick(plan)}
-            title={!assessmentId ? 'Complete your Risk Assessment first' : ''}
-            style={{ background: assessmentId ? 'linear-gradient(135deg, #10b981, #059669)' : '#e2e8f0', border: 'none', color: assessmentId ? '#fff' : '#94a3b8', cursor: 'pointer', padding: '9px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', fontFamily: 'inherit', boxShadow: assessmentId ? '0 2px 8px rgba(16,185,129,0.3)' : 'none' }}>
-            {assessmentId ? 'Apply Now' : '🔒 Assessment Required'}
+          <button
+            onClick={() => { if (!appStatus || appStatus === 'rejected' || appStatus === 'cancelled') handleApplyClick(plan); }}
+            title={!assessmentId ? 'Complete your Risk Assessment first' : appStatus === 'pending' ? 'Application pending review' : appStatus === 'approved' ? 'You already have this policy' : ''}
+            style={{
+              background: appStatus === 'approved' ? '#10b981' : appStatus === 'pending' ? '#f59e0b' : !assessmentId ? '#e2e8f0' : 'linear-gradient(135deg, #10b981, #059669)',
+              border: 'none',
+              color: appStatus ? '#fff' : assessmentId ? '#fff' : '#94a3b8',
+              cursor: (appStatus === 'pending' || appStatus === 'approved' || !assessmentId) ? 'not-allowed' : 'pointer',
+              padding: '9px 24px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', fontFamily: 'inherit',
+              boxShadow: (!appStatus && assessmentId) ? '0 2px 8px rgba(16,185,129,0.3)' : 'none'
+            }}>
+            {appStatus === 'approved' ? '✓ Policy Active' : appStatus === 'pending' ? '⏳ Pending' : !assessmentId ? '🔒 Assessment Required' : 'Apply Now'}
           </button>
         </div>
 
@@ -492,8 +510,8 @@ function BrowsePlans() {
                   {compareList.map(p => {
                     const features = parseJson(p.features);
                     return (
-                      <td key={p.id} style={{ padding: '12px', color: '#475569', fontSize: '13px', verticalAlign: 'top' }}>
-                        {features.length > 0 ? <ul style={{ margin: 0, paddingLeft: '16px' }}>{features.map((f, i) => <li key={i} style={{ marginBottom: '3px' }}>{f}</li>)}</ul> : <span style={{ color: '#94a3b8' }}>—</span>}
+                      <td key={p.id} style={{ padding: '12px', color: '#475569', fontSize: '13px', verticalAlign: 'top', textAlign: 'center' }}>
+                        {features.length > 0 ? <ul style={{ margin: '0 auto', paddingLeft: '16px', display: 'inline-block', textAlign: 'left' }}>{features.map((f, i) => <li key={i} style={{ marginBottom: '3px' }}>{f}</li>)}</ul> : <span style={{ color: '#94a3b8' }}>—</span>}
                       </td>
                     );
                   })}
@@ -503,8 +521,8 @@ function BrowsePlans() {
                   {compareList.map(p => {
                     const exclusions = parseJson(p.exclusions);
                     return (
-                      <td key={p.id} style={{ padding: '12px', color: '#475569', fontSize: '13px', verticalAlign: 'top' }}>
-                        {exclusions.length > 0 ? <ul style={{ margin: 0, paddingLeft: '16px' }}>{exclusions.map((e, i) => <li key={i} style={{ marginBottom: '3px' }}>{e}</li>)}</ul> : <span style={{ color: '#94a3b8' }}>—</span>}
+                      <td key={p.id} style={{ padding: '12px', color: '#475569', fontSize: '13px', verticalAlign: 'top', textAlign: 'center' }}>
+                        {exclusions.length > 0 ? <ul style={{ margin: '0 auto', paddingLeft: '16px', display: 'inline-block', textAlign: 'left' }}>{exclusions.map((e, i) => <li key={i} style={{ marginBottom: '3px' }}>{e}</li>)}</ul> : <span style={{ color: '#94a3b8' }}>—</span>}
                       </td>
                     );
                   })}

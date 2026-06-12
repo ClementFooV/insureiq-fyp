@@ -34,11 +34,11 @@ module.exports = (pool) => {
 
         // Check no active (pending/approved) claim already exists for this application
         const [existing] = await pool.query(
-          "SELECT id FROM claims WHERE application_id = ? AND status IN ('pending','approved')",
+          "SELECT id FROM claims WHERE application_id = ? AND status = 'pending'",
           [application_id]
         );
         if (existing.length > 0) {
-          return res.status(400).json({ message: 'An active claim already exists for this application.' });
+          return res.status(400).json({ message: 'You already have a pending claim for this application. Please wait for it to be reviewed.' });
         }
 
         // Handle uploaded documents

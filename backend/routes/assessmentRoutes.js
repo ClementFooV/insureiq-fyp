@@ -19,9 +19,6 @@ module.exports = (pool) => {
   // [ADMIN] Get all assessments across all users
   router.get('/admin/all', authMiddleware, requireRole('admin'), assessmentController.getAllAssessments);
 
-  // [ADMIN] Delete a specific assessment
-  router.delete('/admin/:id', authMiddleware, requireRole('admin'), assessmentController.deleteAssessment);
-
   // Get a specific assessment by ID (parameterised — must be last)
   router.get('/:id', authMiddleware, assessmentController.getAssessmentById);
 

@@ -59,6 +59,7 @@ function AdminScoringConfig() {
   const [editingQ, setEditingQ] = useState(null); // null = new
   const [form, setForm] = useState(emptyQuestion());
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [saveConfirm, setSaveConfirm] = useState(null);
 
   const showMsg = (text, type = 'success') => {
     setMsg({ text, type });
@@ -345,7 +346,7 @@ function AdminScoringConfig() {
                     <div key={category} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
                       <div style={{ padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>{category}</span>
-                        <button onClick={() => saveWeights(category)} disabled={saving} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '7px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px' }}>
+                        <button onClick={() => setSaveConfirm(category)} disabled={saving} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '7px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px' }}>
                           Save
                         </button>
                       </div>
@@ -511,6 +512,22 @@ function AdminScoringConfig() {
               <button onClick={saveQuestion} disabled={saving} style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>
                 {saving ? 'Saving...' : 'Save Question'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Save Confirm ── */}
+      {saveConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '28px', maxWidth: '400px', width: '90%', border: '1px solid #e2e8f0' }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '16px' }}>Save Changes?</h3>
+            <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>
+              You are about to update <strong>{saveConfirm}</strong> settings. This will affect all future assessments immediately.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setSaveConfirm(null)} style={{ padding: '8px 16px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '7px', color: '#475569', cursor: 'pointer', fontWeight: '600', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => { saveWeights(saveConfirm); setSaveConfirm(null); }} style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontFamily: 'inherit' }}>Yes, Save</button>
             </div>
           </div>
         </div>

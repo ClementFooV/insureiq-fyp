@@ -16,7 +16,7 @@ const run = async () => {
         user_id INT NOT NULL, 
         plan_id INT NOT NULL, 
         provider_id INT NOT NULL, 
-        assessment_id INT NOT NULL, 
+        assessment_id INT NOT NULL,
         applicant_name VARCHAR(100) NOT NULL, 
         applicant_email VARCHAR(100) NOT NULL, 
         applicant_phone VARCHAR(20) NOT NULL, 
@@ -26,7 +26,7 @@ const run = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, 
         FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE CASCADE, 
-        FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE, 
+        FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
       );
     `;

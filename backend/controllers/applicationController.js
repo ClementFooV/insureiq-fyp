@@ -12,10 +12,17 @@ module.exports = (pool) => {
           return res.status(400).json({ message: 'All application fields are required.' });
         }
 
-        // Check if user already applied for this exact plan (to prevent duplicates)
-        const [existing] = await pool.query('SELECT id FROM applications WHERE user_id = ? AND plan_id = ?', [userId, plan_id]);
+        // Block if there is already a pending or approved application for this plan
+        const [existing] = await pool.query(
+          "SELECT id, status FROM applications WHERE user_id = ? AND plan_id = ? AND status IN ('pending', 'approved')",
+          [userId, plan_id]
+        );
         if (existing.length > 0) {
-          return res.status(400).json({ message: 'You have already applied for this plan.' });
+          const status = existing[0].status;
+          const msg = status === 'approved'
+            ? 'You already have an active policy for this plan.'
+            : 'You already have a pending application for this plan.';
+          return res.status(400).json({ message: msg });
         }
 
         const query = `
